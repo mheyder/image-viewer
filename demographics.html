@@ -268,6 +268,39 @@
             </div>
 
             <div class="data-table">
+                <h3 class="table-title">Resolution Distribution Analysis</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                    <div class="stat-card">
+                        <span class="stat-label">Width Statistics</span>
+                        <div id="widthStats" style="margin-top: 10px; font-size: 14px; text-align: left;">
+                            <!-- Width stats will be inserted here -->
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Height Statistics</span>
+                        <div id="heightStats" style="margin-top: 10px; font-size: 14px; text-align: left;">
+                            <!-- Height stats will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+                    <div class="chart-card">
+                        <h4 class="chart-title" style="font-size: 1.2em;">Width Distribution</h4>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="widthDistributionChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h4 class="chart-title" style="font-size: 1.2em;">Height Distribution</h4>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="heightDistributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-table">
                 <h3 class="table-title">Detailed Breakdown by Image Type</h3>
                 <table id="imageTypeTable">
                     <thead>
@@ -307,6 +340,8 @@
         let jsonData = [];
         let imageTypeChart = null;
         let categoryChart = null;
+        let widthDistributionChart = null;
+        let heightDistributionChart = null;
 
         document.getElementById('jsonFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -398,11 +433,15 @@
                 }
             });
 
+            // Calculate resolution statistics
+            const resolutionStats = calculateResolutionStats();
+
             return {
                 totalRecords,
                 totalRejections,
                 imageTypeStats,
                 categoryStats,
+                resolutionStats,
                 acceptanceRate: ((totalRecords - totalRejections) / totalRecords * 100).toFixed(1),
                 rejectionRate: (totalRejections / totalRecords * 100).toFixed(1)
             };
@@ -433,6 +472,7 @@
         function updateCharts(stats) {
             createImageTypeChart(stats.imageTypeStats);
             createCategoryChart(stats.categoryStats);
+            updateResolutionAnalysis(stats.resolutionStats);
         }
 
         function createImageTypeChart(imageTypeStats) {
@@ -618,6 +658,189 @@
             }
             
             return [...colors, ...additionalColors];
+        }
+
+        function calculateResolutionStats() {
+            const widths = [];
+            const heights = [];
+
+            jsonData.forEach(item => {
+                if (item.original_width && item.original_height) {
+                    widths.push(Number(item.original_width));
+                    heights.push(Number(item.original_height));
+                }
+            });
+
+            return {
+                widths: widths,
+                heights: heights,
+                widthStats: calculateDimensionStats(widths),
+                heightStats: calculateDimensionStats(heights)
+            };
+        }
+
+        function calculateDimensionStats(values) {
+            if (values.length === 0) return null;
+
+            const sorted = [...values].sort((a, b) => a - b);
+            const sum = values.reduce((a, b) => a + b, 0);
+            
+            return {
+                count: values.length,
+                average: Math.round(sum / values.length),
+                min: Math.min(...values),
+                max: Math.max(...values),
+                p75: percentile(sorted, 75),
+                p90: percentile(sorted, 90)
+            };
+        }
+
+        function percentile(sortedArray, p) {
+            const index = (p / 100) * (sortedArray.length - 1);
+            if (Math.floor(index) === index) {
+                return sortedArray[index];
+            } else {
+                const lower = Math.floor(index);
+                const upper = Math.ceil(index);
+                const weight = index - lower;
+                return Math.round(sortedArray[lower] * (1 - weight) + sortedArray[upper] * weight);
+            }
+        }
+
+        function updateResolutionAnalysis(resolutionStats) {
+            updateResolutionStats(resolutionStats);
+            createResolutionCharts(resolutionStats);
+        }
+
+        function updateResolutionStats(resolutionStats) {
+            const widthStatsDiv = document.getElementById('widthStats');
+            const heightStatsDiv = document.getElementById('heightStats');
+
+            if (resolutionStats.widthStats) {
+                widthStatsDiv.innerHTML = `
+                    <div style="margin-bottom: 8px;"><strong>Count:</strong> ${resolutionStats.widthStats.count}</div>
+                    <div style="margin-bottom: 8px;"><strong>Average:</strong> ${resolutionStats.widthStats.average}px</div>
+                    <div style="margin-bottom: 8px;"><strong>P75:</strong> ${resolutionStats.widthStats.p75}px</div>
+                    <div style="margin-bottom: 8px;"><strong>P90:</strong> ${resolutionStats.widthStats.p90}px</div>
+                    <div style="margin-bottom: 8px;"><strong>Range:</strong> ${resolutionStats.widthStats.min}-${resolutionStats.widthStats.max}px</div>
+                `;
+            } else {
+                widthStatsDiv.innerHTML = '<div>No width data available</div>';
+            }
+
+            if (resolutionStats.heightStats) {
+                heightStatsDiv.innerHTML = `
+                    <div style="margin-bottom: 8px;"><strong>Count:</strong> ${resolutionStats.heightStats.count}</div>
+                    <div style="margin-bottom: 8px;"><strong>Average:</strong> ${resolutionStats.heightStats.average}px</div>
+                    <div style="margin-bottom: 8px;"><strong>P75:</strong> ${resolutionStats.heightStats.p75}px</div>
+                    <div style="margin-bottom: 8px;"><strong>P90:</strong> ${resolutionStats.heightStats.p90}px</div>
+                    <div style="margin-bottom: 8px;"><strong>Range:</strong> ${resolutionStats.heightStats.min}-${resolutionStats.heightStats.max}px</div>
+                `;
+            } else {
+                heightStatsDiv.innerHTML = '<div>No height data available</div>';
+            }
+        }
+
+        function createResolutionCharts(resolutionStats) {
+            if (resolutionStats.widths.length > 0) {
+                createHistogramChart('widthDistributionChart', resolutionStats.widths, 'Width (px)', widthDistributionChart);
+            }
+            
+            if (resolutionStats.heights.length > 0) {
+                createHistogramChart('heightDistributionChart', resolutionStats.heights, 'Height (px)', heightDistributionChart);
+            }
+        }
+
+        function createHistogramChart(canvasId, data, label, chartVariable) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            if (chartVariable) {
+                chartVariable.destroy();
+            }
+
+            // Create histogram bins
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const binCount = Math.min(20, Math.ceil(Math.sqrt(data.length))); // Optimal bin count
+            const binSize = (max - min) / binCount;
+            
+            const bins = [];
+            const binLabels = [];
+            
+            for (let i = 0; i < binCount; i++) {
+                const binStart = min + (i * binSize);
+                const binEnd = min + ((i + 1) * binSize);
+                bins.push(0);
+                binLabels.push(`${Math.round(binStart)}-${Math.round(binEnd)}`);
+            }
+
+            // Count data points in each bin
+            data.forEach(value => {
+                const binIndex = Math.min(Math.floor((value - min) / binSize), binCount - 1);
+                bins[binIndex]++;
+            });
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: binLabels,
+                    datasets: [{
+                        label: 'Frequency',
+                        data: bins,
+                        backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    return `${label}: ${context[0].label}`;
+                                },
+                                label: function(context) {
+                                    return `Count: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Frequency'
+                            },
+                            ticks: {
+                                stepSize: 1
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: label
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 0
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Update the chart variable reference
+            if (canvasId === 'widthDistributionChart') {
+                widthDistributionChart = chart;
+            } else if (canvasId === 'heightDistributionChart') {
+                heightDistributionChart = chart;
+            }
         }
 
         // Check for stored data on page load
