@@ -219,6 +219,19 @@
             font-weight: 600;
         }
 
+        .filter-section select:hover {
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .filter-section button:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
         @media (max-width: 768px) {
             .charts-container {
                 grid-template-columns: 1fr;
@@ -244,6 +257,18 @@
                 <span>📊 Choose JSON File</span>
                 <input type="file" id="jsonFile" accept=".json">
             </label>
+        </div>
+
+        <div class="filter-section" id="filterSection" style="display: none; text-align: center; margin-bottom: 30px;">
+            <div style="display: inline-block; margin: 0 15px;">
+                <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">Filter by Category:</label>
+                <select id="categoryFilter" style="padding: 10px 20px; border: 2px solid #667eea; border-radius: 25px; background: white; color: #667eea; font-size: 16px; font-weight: 500; cursor: pointer; min-width: 200px;">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <button id="clearFilters" style="padding: 10px 20px; background: white; border: 2px solid #667eea; color: #667eea; border-radius: 25px; cursor: pointer; font-size: 16px; font-weight: 500; margin-left: 15px; transition: all 0.3s ease;">
+                Clear Filters
+            </button>
         </div>
 
         <div id="content" style="display: none;">
@@ -338,6 +363,8 @@
 
     <script>
         let jsonData = [];
+        let filteredData = [];
+        let currentCategoryFilter = '';
         let imageTypeChart = null;
         let categoryChart = null;
         let widthDistributionChart = null;
@@ -357,8 +384,11 @@
                         // Store data in localStorage
                         localStorage.setItem('imageGalleryData', JSON.stringify(jsonData));
                         
+                        populateCategoryFilter();
+                        applyFilters();
                         analyzeData();
                         showContent(true);
+                        showFilterSection(true);
                     } catch (error) {
                         alert('Error parsing JSON file: ' + error.message);
                     }
@@ -374,8 +404,11 @@
                 try {
                     jsonData = JSON.parse(storedData);
                     if (jsonData.length > 0) {
+                        populateCategoryFilter();
+                        applyFilters();
                         analyzeData();
                         showContent(true);
+                        showFilterSection(true);
                         return true;
                     }
                 } catch (error) {
@@ -391,6 +424,42 @@
             document.getElementById('noData').style.display = show ? 'none' : 'block';
         }
 
+        function populateCategoryFilter() {
+            const categorySelect = document.getElementById('categoryFilter');
+            const categories = new Set();
+            
+            jsonData.forEach(item => {
+                if (item.category && item.category.trim() !== '') {
+                    categories.add(item.category.trim());
+                }
+            });
+            
+            // Clear existing options except the first one
+            categorySelect.innerHTML = '<option value="">All Categories</option>';
+            
+            // Add category options sorted alphabetically
+            Array.from(categories).sort().forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categorySelect.appendChild(option);
+            });
+        }
+
+        function applyFilters() {
+            filteredData = jsonData.filter(item => {
+                // Category filter
+                if (currentCategoryFilter && item.category !== currentCategoryFilter) {
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function showFilterSection(show) {
+            document.getElementById('filterSection').style.display = show ? 'block' : 'none';
+        }
+
         function analyzeData() {
             const stats = calculateStatistics();
             updateStatsOverview(stats);
@@ -399,14 +468,14 @@
         }
 
         function calculateStatistics() {
-            const totalRecords = jsonData.length;
+            const totalRecords = filteredData.length;
             
             // Count by image type
             const imageTypeStats = {};
             const categoryStats = {};
             let totalRejections = 0;
 
-            jsonData.forEach(item => {
+            filteredData.forEach(item => {
                 const imageType = item.img_type || 'Unknown';
                 const category = item.category;
                 
@@ -449,22 +518,27 @@
 
         function updateStatsOverview(stats) {
             const statsOverview = document.getElementById('statsOverview');
+            const filterInfo = currentCategoryFilter ? ` (${currentCategoryFilter} only)` : '';
+            const totalInDataset = jsonData.length;
+            const recordsLabel = currentCategoryFilter ? `Filtered Records${filterInfo}` : 'Total Records';
+            
             statsOverview.innerHTML = `
                 <div class="stat-card">
                     <span class="stat-number">${stats.totalRecords}</span>
-                    <span class="stat-label">Total Records</span>
+                    <span class="stat-label">${recordsLabel}</span>
+                    ${currentCategoryFilter ? `<div style="font-size: 0.9em; color: #999; margin-top: 5px;">of ${totalInDataset} total</div>` : ''}
                 </div>
                 <div class="stat-card">
                     <span class="stat-number">${stats.totalRejections}</span>
-                    <span class="stat-label">Total Rejections</span>
+                    <span class="stat-label">Total Rejections${filterInfo}</span>
                 </div>
                 <div class="stat-card">
                     <span class="stat-number">${stats.rejectionRate}%</span>
-                    <span class="stat-label">Rejection Rate</span>
+                    <span class="stat-label">Rejection Rate${filterInfo}</span>
                 </div>
                 <div class="stat-card">
                     <span class="stat-number">${stats.acceptanceRate}%</span>
-                    <span class="stat-label">Acceptance Rate</span>
+                    <span class="stat-label">Acceptance Rate${filterInfo}</span>
                 </div>
             `;
         }
@@ -664,7 +738,7 @@
             const widths = [];
             const heights = [];
 
-            jsonData.forEach(item => {
+            filteredData.forEach(item => {
                 if (item.original_width && item.original_height) {
                     widths.push(Number(item.original_width));
                     heights.push(Number(item.original_height));
@@ -842,6 +916,20 @@
                 heightDistributionChart = chart;
             }
         }
+
+        // Filter event listeners
+        document.getElementById('categoryFilter').addEventListener('change', function(e) {
+            currentCategoryFilter = e.target.value;
+            applyFilters();
+            analyzeData();
+        });
+
+        document.getElementById('clearFilters').addEventListener('click', function() {
+            document.getElementById('categoryFilter').value = '';
+            currentCategoryFilter = '';
+            applyFilters();
+            analyzeData();
+        });
 
         // Check for stored data on page load
         document.addEventListener('DOMContentLoaded', function() {
