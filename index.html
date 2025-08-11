@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Gallery Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .data-input {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .file-input-wrapper {
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .file-input-wrapper:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        #jsonFile {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .pagination button {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #ccc;
+            color: #ccc;
+        }
+
+        .page-info {
+            font-weight: 600;
+            color: #555;
+            padding: 10px 20px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 20px;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 20px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 1.1em;
+            letter-spacing: 0.5px;
+        }
+
+        th:first-child {
+            border-top-left-radius: 15px;
+        }
+
+        th:last-child {
+            border-top-right-radius: 15px;
+        }
+
+        td {
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: top;
+        }
+
+        tbody tr {
+            transition: all 0.3s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+            transform: scale(1.01);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .image-cell {
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .image-cell img {
+            max-width: 500px;
+            max-height: 500px;
+            width: auto;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .image-cell img:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+        }
+
+        .info-cell {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #444;
+        }
+
+        .info-line {
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .info-line:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #667eea;
+            display: inline-block;
+            min-width: 140px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-image {
+            max-width: 95%;
+            max-height: 95%;
+            width: auto;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.2);
+            animation: zoomIn 0.3s ease;
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.8); }
+            to { transform: scale(1); }
+        }
+
+        .close {
+            position: absolute;
+            top: 30px;
+            right: 45px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+            transition: all 0.3s ease;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .close:hover {
+            color: #f1f1f1;
+            transform: rotate(90deg);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: #888;
+            font-size: 1.2em;
+        }
+
+        .stats {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 15px;
+            color: #555;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Gallery Viewer</h1>
+        <p class="subtitle">Upload your JSON file to view image comparisons</p>
+        
+        <div class="data-input">
+            <label class="file-input-wrapper">
+                <span>📁 Choose JSON File</span>
+                <input type="file" id="jsonFile" accept=".json">
+            </label>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0; padding: 15px; background: #fff3cd; border-radius: 10px; display: none;" id="corsNotice">
+            <p style="color: #856404; margin-bottom: 10px;">
+                <strong>⚠️ CORS Notice:</strong> Some images may be blocked due to CORS policies.
+            </p>
+            <p style="color: #856404; font-size: 14px;">
+                Options: 1) Use "Open in New Tab" links, 2) Download images locally first, or 3) Use a CORS proxy
+            </p>
+        </div>
+
+        <div id="stats" class="stats" style="display: none;"></div>
+
+        <div class="pagination" id="topPagination" style="display: none;">
+            <button id="firstPageTop">First</button>
+            <button id="prevPageTop">Previous</button>
+            <span class="page-info" id="pageInfoTop"></span>
+            <button id="nextPageTop">Next</button>
+            <button id="lastPageTop">Last</button>
+        </div>
+
+        <div class="table-container">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>Original Image</th>
+                        <th>Enhanced Image</th>
+                        <th>Information</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="3" class="no-data">Please upload a JSON file to begin</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination" id="bottomPagination" style="display: none;">
+            <button id="firstPageBottom">First</button>
+            <button id="prevPageBottom">Previous</button>
+            <span class="page-info" id="pageInfoBottom"></span>
+            <button id="nextPageBottom">Next</button>
+            <button id="lastPageBottom">Last</button>
+        </div>
+    </div>
+
+    <div id="imageModal" class="modal">
+        <span class="close">&times;</span>
+        <div class="modal-content">
+            <img class="modal-image" id="modalImage" src="" alt="Full size image">
+        </div>
+    </div>
+
+    <script>
+        let jsonData = [];
+        let currentPage = 1;
+        const itemsPerPage = 100;
+
+        document.getElementById('jsonFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        jsonData = JSON.parse(e.target.result);
+                        if (!Array.isArray(jsonData)) {
+                            jsonData = [jsonData];
+                        }
+                        currentPage = 1;
+                        updateStats();
+                        renderTable();
+                        updatePagination();
+                        showPagination(true);
+                    } catch (error) {
+                        alert('Error parsing JSON file: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function updateStats() {
+            const statsDiv = document.getElementById('stats');
+            statsDiv.style.display = 'block';
+            statsDiv.innerHTML = `Total Records: ${jsonData.length} | Pages: ${Math.ceil(jsonData.length / itemsPerPage)}`;
+        }
+
+        function showPagination(show) {
+            document.getElementById('topPagination').style.display = show ? 'flex' : 'none';
+            document.getElementById('bottomPagination').style.display = show ? 'flex' : 'none';
+        }
+
+        function renderTable() {
+            const tableBody = document.getElementById('tableBody');
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, jsonData.length);
+            
+            if (jsonData.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3" class="no-data">No data available</td></tr>';
+                return;
+            }
+
+            // Show CORS notice
+            document.getElementById('corsNotice').style.display = 'block';
+
+            tableBody.innerHTML = '';
+            
+            for (let i = startIndex; i < endIndex; i++) {
+                const item = jsonData[i];
+                const row = document.createElement('tr');
+                
+                // Original Image
+                const originalCell = document.createElement('td');
+                originalCell.className = 'image-cell';
+                if (item.original_image) {
+                    const container = document.createElement('div');
+                    container.style.position = 'relative';
+                    
+                    const img = document.createElement('img');
+                    img.src = item.original_image;
+                    img.alt = 'Original Image';
+                    img.crossOrigin = 'anonymous';
+                    img.referrerPolicy = 'no-referrer';
+                    img.onclick = () => openModal(item.original_image);
+                    
+                    img.onerror = function() {
+                        // If direct loading fails, show link option
+                        container.innerHTML = `
+                            <div style="padding: 20px; background: #f9f9f9; border-radius: 10px; text-align: center;">
+                                <p style="color: #666; margin-bottom: 10px;">Image blocked by CORS</p>
+                                <a href="${item.original_image}" target="_blank" 
+                                   style="color: #667eea; text-decoration: none; padding: 8px 16px; 
+                                          background: white; border: 2px solid #667eea; border-radius: 20px; 
+                                          display: inline-block; margin: 5px;">
+                                    Open in New Tab
+                                </a>
+                                <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 8px;">
+                                    <small style="color: #999; word-break: break-all; display: block;">
+                                        ${item.original_image.substring(0, 50)}...
+                                    </small>
+                                </div>
+                            </div>
+                        `;
+                    };
+                    
+                    container.appendChild(img);
+                    originalCell.appendChild(container);
+                } else {
+                    originalCell.innerHTML = '<div style="color: #999;">No image</div>';
+                }
+                row.appendChild(originalCell);
+                
+                // Enhanced Image
+                const enhancedCell = document.createElement('td');
+                enhancedCell.className = 'image-cell';
+                if (item.enhanced_image) {
+                    const container = document.createElement('div');
+                    container.style.position = 'relative';
+                    
+                    const img = document.createElement('img');
+                    img.src = item.enhanced_image;
+                    img.alt = 'Enhanced Image';
+                    img.crossOrigin = 'anonymous';
+                    img.referrerPolicy = 'no-referrer';
+                    img.onclick = () => openModal(item.enhanced_image);
+                    
+                    img.onerror = function() {
+                        // If direct loading fails, show link option
+                        container.innerHTML = `
+                            <div style="padding: 20px; background: #f9f9f9; border-radius: 10px; text-align: center;">
+                                <p style="color: #666; margin-bottom: 10px;">Image blocked by CORS</p>
+                                <a href="${item.enhanced_image}" target="_blank" 
+                                   style="color: #667eea; text-decoration: none; padding: 8px 16px; 
+                                          background: white; border: 2px solid #667eea; border-radius: 20px; 
+                                          display: inline-block; margin: 5px;">
+                                    Open in New Tab
+                                </a>
+                                <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 8px;">
+                                    <small style="color: #999; word-break: break-all; display: block;">
+                                        ${item.enhanced_image.substring(0, 50)}...
+                                    </small>
+                                </div>
+                            </div>
+                        `;
+                    };
+                    
+                    container.appendChild(img);
+                    enhancedCell.appendChild(container);
+                } else {
+                    enhancedCell.innerHTML = '<div style="color: #999;">No image</div>';
+                }
+                row.appendChild(enhancedCell);
+                
+                // Information
+                const infoCell = document.createElement('td');
+                infoCell.className = 'info-cell';
+                
+                const infoFields = [
+                    { label: 'Artwork ID', value: item.artwork_id },
+                    { label: 'Width', value: item.width },
+                    { label: 'Height', value: item.height },
+                    { label: 'Image Type', value: item.img_type },
+                    { label: 'Request Note', value: item.request_note },
+                    { label: 'Rejection Reason', value: item.rejection_reason }
+                ];
+                
+                infoFields.forEach(field => {
+                    if (field.value !== undefined && field.value !== null && field.value !== '') {
+                        const infoLine = document.createElement('div');
+                        infoLine.className = 'info-line';
+                        infoLine.innerHTML = `<span class="info-label">${field.label}:</span> ${field.value}`;
+                        infoCell.appendChild(infoLine);
+                    }
+                });
+                
+                row.appendChild(infoCell);
+                tableBody.appendChild(row);
+            }
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(jsonData.length / itemsPerPage);
+            
+            // Update page info
+            document.getElementById('pageInfoTop').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('pageInfoBottom').textContent = `Page ${currentPage} of ${totalPages}`;
+            
+            // Update button states for top pagination
+            document.getElementById('firstPageTop').disabled = currentPage === 1;
+            document.getElementById('prevPageTop').disabled = currentPage === 1;
+            document.getElementById('nextPageTop').disabled = currentPage === totalPages;
+            document.getElementById('lastPageTop').disabled = currentPage === totalPages;
+            
+            // Update button states for bottom pagination
+            document.getElementById('firstPageBottom').disabled = currentPage === 1;
+            document.getElementById('prevPageBottom').disabled = currentPage === 1;
+            document.getElementById('nextPageBottom').disabled = currentPage === totalPages;
+            document.getElementById('lastPageBottom').disabled = currentPage === totalPages;
+        }
+
+        // Pagination event listeners
+        document.getElementById('firstPageTop').addEventListener('click', () => goToPage(1));
+        document.getElementById('firstPageBottom').addEventListener('click', () => goToPage(1));
+        
+        document.getElementById('prevPageTop').addEventListener('click', () => goToPage(currentPage - 1));
+        document.getElementById('prevPageBottom').addEventListener('click', () => goToPage(currentPage - 1));
+        
+        document.getElementById('nextPageTop').addEventListener('click', () => goToPage(currentPage + 1));
+        document.getElementById('nextPageBottom').addEventListener('click', () => goToPage(currentPage + 1));
+        
+        document.getElementById('lastPageTop').addEventListener('click', () => goToPage(Math.ceil(jsonData.length / itemsPerPage)));
+        document.getElementById('lastPageBottom').addEventListener('click', () => goToPage(Math.ceil(jsonData.length / itemsPerPage)));
+
+        function goToPage(page) {
+            const totalPages = Math.ceil(jsonData.length / itemsPerPage);
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                renderTable();
+                updatePagination();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        // Modal functionality
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImage');
+        const closeBtn = document.getElementsByClassName('close')[0];
+
+        function openModal(imageSrc) {
+            modal.style.display = 'block';
+            modalImg.src = imageSrc;
+        }
+
+        closeBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (modal.style.display === 'block' && e.key === 'Escape') {
+                modal.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
