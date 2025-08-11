@@ -273,9 +273,8 @@
                     <thead>
                         <tr>
                             <th>Image Type</th>
-                            <th>Total Count</th>
                             <th>Rejection Count</th>
-                            <th>Rejection Rate</th>
+                            <th>Percentage of Total Rejections</th>
                         </tr>
                     </thead>
                     <tbody id="imageTypeTableBody">
@@ -553,17 +552,20 @@
             const tbody = document.getElementById('imageTypeTableBody');
             tbody.innerHTML = '';
 
+            // Calculate total rejections across all image types
+            const totalRejections = Object.values(imageTypeStats).reduce((sum, data) => sum + data.rejections, 0);
+
             Object.entries(imageTypeStats)
+                .filter(([type, data]) => data.rejections > 0) // Only show types with rejections
                 .sort((a, b) => b[1].rejections - a[1].rejections)
                 .forEach(([type, data]) => {
-                    const rejectionRate = ((data.rejections / data.total) * 100).toFixed(1);
+                    const percentage = ((data.rejections / totalRejections) * 100).toFixed(1);
                     
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${type}</td>
-                        <td>${data.total}</td>
                         <td>${data.rejections}</td>
-                        <td><span class="percentage">${rejectionRate}%</span></td>
+                        <td><span class="percentage">${percentage}%</span></td>
                     `;
                     tbody.appendChild(row);
                 });
