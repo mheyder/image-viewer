@@ -301,6 +301,32 @@
             color: #555;
             font-weight: 500;
         }
+
+        .navigation {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .nav-link {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 0 10px;
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        .nav-link:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -313,6 +339,10 @@
                 <span>📁 Choose JSON File</span>
                 <input type="file" id="jsonFile" accept=".json">
             </label>
+        </div>
+
+        <div class="navigation" id="navigationLinks" style="display: none; text-align: center; margin-bottom: 30px;">
+            <a href="demographics.html" class="nav-link" id="demographicsLink">📊 View Demographics</a>
         </div>
 
         <div style="text-align: center; margin: 20px 0; padding: 15px; background: #fff3cd; border-radius: 10px; display: none;" id="corsNotice">
@@ -382,11 +412,16 @@
                         if (!Array.isArray(jsonData)) {
                             jsonData = [jsonData];
                         }
+                        
+                        // Store data in localStorage for demographics page
+                        localStorage.setItem('imageGalleryData', JSON.stringify(jsonData));
+                        
                         currentPage = 1;
                         updateStats();
                         renderTable();
                         updatePagination();
                         showPagination(true);
+                        showNavigationLinks(true);
                     } catch (error) {
                         alert('Error parsing JSON file: ' + error.message);
                     }
@@ -404,6 +439,10 @@
         function showPagination(show) {
             document.getElementById('topPagination').style.display = show ? 'flex' : 'none';
             document.getElementById('bottomPagination').style.display = show ? 'flex' : 'none';
+        }
+
+        function showNavigationLinks(show) {
+            document.getElementById('navigationLinks').style.display = show ? 'block' : 'none';
         }
 
         function renderTable() {
@@ -602,6 +641,26 @@
         document.addEventListener('keydown', function(e) {
             if (modal.style.display === 'block' && e.key === 'Escape') {
                 modal.style.display = 'none';
+            }
+        });
+
+        // Check if data exists in localStorage on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const storedData = localStorage.getItem('imageGalleryData');
+            if (storedData) {
+                try {
+                    jsonData = JSON.parse(storedData);
+                    if (jsonData.length > 0) {
+                        updateStats();
+                        renderTable();
+                        updatePagination();
+                        showPagination(true);
+                        showNavigationLinks(true);
+                    }
+                } catch (error) {
+                    console.error('Error loading stored data:', error);
+                    localStorage.removeItem('imageGalleryData');
+                }
             }
         });
     </script>
