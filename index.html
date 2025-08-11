@@ -178,8 +178,8 @@
         }
 
         .image-cell img {
-            max-width: 500px;
-            max-height: 500px;
+            max-width: 400px;
+            max-height: 400px;
             width: auto;
             height: auto;
             border-radius: 10px;
@@ -215,7 +215,7 @@
             font-weight: 600;
             color: #667eea;
             display: inline-block;
-            min-width: 140px;
+            min-width: 160px;
         }
 
         .modal {
@@ -320,7 +320,7 @@
                 <strong>⚠️ CORS Notice:</strong> Some images may be blocked due to CORS policies.
             </p>
             <p style="color: #856404; font-size: 14px;">
-                Options: 1) Use "Open in New Tab" links, 2) Download images locally first, or 3) Use a CORS proxy
+                Click "Open in New Tab" to view blocked images directly.
             </p>
         </div>
 
@@ -513,11 +513,12 @@
                 
                 const infoFields = [
                     { label: 'Artwork ID', value: item.artwork_id },
-                    { label: 'Width', value: item.width },
-                    { label: 'Height', value: item.height },
                     { label: 'Image Type', value: item.img_type },
-                    { label: 'Request Note', value: item.request_note },
-                    { label: 'Rejection Reason', value: item.rejection_reason }
+                    { label: 'Original Dimensions', value: item.original_width && item.original_height ? `${item.original_width} × ${item.original_height}` : null },
+                    { label: 'Enhanced Dimensions', value: item.enhanced_width && item.enhanced_height ? `${item.enhanced_width} × ${item.enhanced_height}` : null },
+                    { label: 'Enhancement Request', value: item.enhancement_request },
+                    { label: 'Redraw Comment', value: item.redraw_comment },
+                    { label: 'Rejection Category', value: item.category },
                 ];
                 
                 infoFields.forEach(field => {
