@@ -327,6 +327,19 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
+
+        .filter-section select:hover {
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .filter-section button:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -343,6 +356,18 @@
 
         <div class="navigation" id="navigationLinks" style="display: none; text-align: center; margin-bottom: 30px;">
             <a href="demographics.html" class="nav-link" id="demographicsLink">📊 View Infographics</a>
+        </div>
+
+        <div class="filter-section" id="filterSection" style="display: none; text-align: center; margin-bottom: 30px;">
+            <div style="display: inline-block; margin: 0 15px;">
+                <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">Filter by Category:</label>
+                <select id="categoryFilter" style="padding: 10px 20px; border: 2px solid #667eea; border-radius: 25px; background: white; color: #667eea; font-size: 16px; font-weight: 500; cursor: pointer; min-width: 200px;">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <button id="clearFilters" style="padding: 10px 20px; background: white; border: 2px solid #667eea; color: #667eea; border-radius: 25px; cursor: pointer; font-size: 16px; font-weight: 500; margin-left: 15px; transition: all 0.3s ease;">
+                Clear Filters
+            </button>
         </div>
 
         <div style="text-align: center; margin: 20px 0; padding: 15px; background: #fff3cd; border-radius: 10px; display: none;" id="corsNotice">
@@ -399,8 +424,10 @@
 
     <script>
         let jsonData = [];
+        let filteredData = [];
         let currentPage = 1;
         const itemsPerPage = 100;
+        let currentCategoryFilter = '';
 
         document.getElementById('jsonFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -417,11 +444,14 @@
                         localStorage.setItem('imageGalleryData', JSON.stringify(jsonData));
                         
                         currentPage = 1;
+                        populateCategoryFilter();
+                        applyFilters();
                         updateStats();
                         renderTable();
                         updatePagination();
                         showPagination(true);
                         showNavigationLinks(true);
+                        showFilterSection(true);
                     } catch (error) {
                         alert('Error parsing JSON file: ' + error.message);
                     }
@@ -433,7 +463,49 @@
         function updateStats() {
             const statsDiv = document.getElementById('stats');
             statsDiv.style.display = 'block';
-            statsDiv.innerHTML = `Total Records: ${jsonData.length} | Pages: ${Math.ceil(jsonData.length / itemsPerPage)}`;
+            const totalRecords = filteredData.length;
+            const totalPages = Math.ceil(totalRecords / itemsPerPage);
+            const filterInfo = currentCategoryFilter ? ` | Filtered by: ${currentCategoryFilter}` : '';
+            statsDiv.innerHTML = `Total Records: ${totalRecords} of ${jsonData.length}${filterInfo} | Pages: ${totalPages}`;
+        }
+
+        function populateCategoryFilter() {
+            const categorySelect = document.getElementById('categoryFilter');
+            const categories = new Set();
+            
+            jsonData.forEach(item => {
+                if (item.category && item.category.trim() !== '') {
+                    categories.add(item.category.trim());
+                }
+            });
+            
+            // Clear existing options except the first one
+            categorySelect.innerHTML = '<option value="">All Categories</option>';
+            
+            // Add category options sorted alphabetically
+            Array.from(categories).sort().forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categorySelect.appendChild(option);
+            });
+        }
+
+        function applyFilters() {
+            filteredData = jsonData.filter(item => {
+                // Category filter
+                if (currentCategoryFilter && item.category !== currentCategoryFilter) {
+                    return false;
+                }
+                return true;
+            });
+            
+            // Reset to first page when filters change
+            currentPage = 1;
+        }
+
+        function showFilterSection(show) {
+            document.getElementById('filterSection').style.display = show ? 'block' : 'none';
         }
 
         function showPagination(show) {
@@ -448,10 +520,11 @@
         function renderTable() {
             const tableBody = document.getElementById('tableBody');
             const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = Math.min(startIndex + itemsPerPage, jsonData.length);
+            const endIndex = Math.min(startIndex + itemsPerPage, filteredData.length);
             
-            if (jsonData.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="3" class="no-data">No data available</td></tr>';
+            if (filteredData.length === 0) {
+                const noDataMessage = jsonData.length === 0 ? 'No data available' : 'No records match the current filter';
+                tableBody.innerHTML = `<tr><td colspan="3" class="no-data">${noDataMessage}</td></tr>`;
                 return;
             }
 
@@ -461,7 +534,7 @@
             tableBody.innerHTML = '';
             
             for (let i = startIndex; i < endIndex; i++) {
-                const item = jsonData[i];
+                const item = filteredData[i];
                 const row = document.createElement('tr');
                 
                 // Original Image
@@ -575,7 +648,7 @@
         }
 
         function updatePagination() {
-            const totalPages = Math.ceil(jsonData.length / itemsPerPage);
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
             
             // Update page info
             document.getElementById('pageInfoTop').textContent = `Page ${currentPage} of ${totalPages}`;
@@ -604,11 +677,11 @@
         document.getElementById('nextPageTop').addEventListener('click', () => goToPage(currentPage + 1));
         document.getElementById('nextPageBottom').addEventListener('click', () => goToPage(currentPage + 1));
         
-        document.getElementById('lastPageTop').addEventListener('click', () => goToPage(Math.ceil(jsonData.length / itemsPerPage)));
-        document.getElementById('lastPageBottom').addEventListener('click', () => goToPage(Math.ceil(jsonData.length / itemsPerPage)));
+        document.getElementById('lastPageTop').addEventListener('click', () => goToPage(Math.ceil(filteredData.length / itemsPerPage)));
+        document.getElementById('lastPageBottom').addEventListener('click', () => goToPage(Math.ceil(filteredData.length / itemsPerPage)));
 
         function goToPage(page) {
-            const totalPages = Math.ceil(jsonData.length / itemsPerPage);
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
             if (page >= 1 && page <= totalPages) {
                 currentPage = page;
                 renderTable();
@@ -637,6 +710,24 @@
             }
         }
 
+        // Filter event listeners
+        document.getElementById('categoryFilter').addEventListener('change', function(e) {
+            currentCategoryFilter = e.target.value;
+            applyFilters();
+            updateStats();
+            renderTable();
+            updatePagination();
+        });
+
+        document.getElementById('clearFilters').addEventListener('click', function() {
+            document.getElementById('categoryFilter').value = '';
+            currentCategoryFilter = '';
+            applyFilters();
+            updateStats();
+            renderTable();
+            updatePagination();
+        });
+
         // Keyboard navigation
         document.addEventListener('keydown', function(e) {
             if (modal.style.display === 'block' && e.key === 'Escape') {
@@ -651,11 +742,14 @@
                 try {
                     jsonData = JSON.parse(storedData);
                     if (jsonData.length > 0) {
+                        populateCategoryFilter();
+                        applyFilters();
                         updateStats();
                         renderTable();
                         updatePagination();
                         showPagination(true);
                         showNavigationLinks(true);
+                        showFilterSection(true);
                     }
                 } catch (error) {
                     console.error('Error loading stored data:', error);
